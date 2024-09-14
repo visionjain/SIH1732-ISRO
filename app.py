@@ -1,10 +1,15 @@
 import streamlit as st
 import os
-import cv2
-from PIL import Image
-from io import BytesIO
 import tempfile
-from image_enhancer import augment_image, enhance_image, apply_median_blur, detect_edges_and_find_best_landing_spot, detect_edges
+from PIL import Image
+import zipfile
+from image_enhancer import (
+    augment_image,
+    enhance_image,
+    apply_median_blur,
+    detect_edges_and_find_best_landing_spot,
+    detect_edges
+)
 
 # Set up directories for saving images
 BASE_DIR = tempfile.gettempdir()
@@ -19,6 +24,15 @@ for directory in [AUGMENTED_DIR, ENHANCED_DIR, BLURRED_DIR, EDGES_DIR]:
 st.title("Lunar Polar Dark Image Enhancer")
 st.write("Upload multiple lunar images, and get various enhanced versions!")
 
+# Function to save image and ensure it is in RGB mode
+def save_image(image, path):
+    # Convert image to RGB if it has an alpha channel
+    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+        image = image.convert("RGB")
+    
+    # Save the image to the given path
+    image.save(path)
+
 # File uploader
 uploaded_files = st.file_uploader("Choose JPG or JPEG images", type=["jpg", "jpeg"], accept_multiple_files=True)
 
@@ -30,7 +44,7 @@ if uploaded_files:
         
         # Save the uploaded image to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
-            image.save(tmp_file.name)
+            save_image(image, tmp_file.name)
             tmp_image_path = tmp_file.name
         
         st.write(f"Processing Image {index + 1}...")
@@ -80,8 +94,6 @@ if uploaded_files:
             st.write("No suitable landing spot found.")
     
     # Option to download all processed images as a ZIP file
-    import zipfile
-
     def create_zip():
         zip_path = os.path.join(BASE_DIR, 'processed_images.zip')
         with zipfile.ZipFile(zip_path, 'w') as zipf:
